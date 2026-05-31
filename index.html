@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор сверхурочных</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #e3e7ef;
+    --text: #1c2333;
+    --muted: #6a7488;
+    --accent: #4a6cf7;
+    --accent-hover: #3b58d4;
+    --success: #14a36f;
+    --warning: #f0a500;
+    --danger: #e5484d;
+    --shadow: 0 2px 8px rgba(20, 30, 60, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px 16px;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  h1 {
+    margin: 0 0 4px 0;
+    font-size: 26px;
+    font-weight: 600;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin: 0 0 24px 0;
+    font-size: 14px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h2 .badge {
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .tab {
+    padding: 8px 14px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-family: inherit;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 500;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .field { display: flex; flex-direction: column; }
+  .field label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field input, .field textarea, .field select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .tz-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 6px;
+  }
+  .tz-pill.kz { background: #fff4d6; color: #8a5a00; }
+  .tz-pill.ru { background: #e0eaff; color: #2845a8; }
+  .subhead {
+    margin: 18px 0 10px 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+  }
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .role-field {
+    background: #f5f7fb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .role-field.has-count { background: #eff3ff; }
+  .role-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+  }
+  .role-code {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .role-time {
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+  }
+  .role-field input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+    background: white;
+  }
+  .role-foot {
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .role-foot .muted { color: var(--muted); }
+  .role-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .r-chip {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .r-chip.muted { color: var(--muted); }
+  .parsed-emp {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .parsed-emp:hover { border-color: var(--accent); }
+  .parsed-emp.selected { border-color: var(--accent); background: #eff3ff; }
+  .parsed-emp-name {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .parsed-emp-tz {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: normal;
+    margin-left: 6px;
+  }
+  .schedule-info {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #8a6a00;
+    padding: 8px 12px;
+    background: #fff7d6;
+    border: 1px solid #f0d975;
+    border-radius: 8px;
+  }
+  .schedule-info strong { color: #6a4f00; }
+  .note-warning {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #8a6a00;
+    padding: 10px 12px;
+    background: #fff7d6;
+    border: 1px solid #f0d975;
+    border-radius: 8px;
+    line-height: 1.45;
+  }
+  .note-warning strong { color: #6a4f00; }
+  .field textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+  }
+  .field .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  button.btn {
+    padding: 10px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  button.btn:hover { background: var(--accent-hover); }
+  button.btn:disabled {
+    background: #b0b8c8;
+    cursor: not-allowed;
+  }
+  button.btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  button.btn.secondary:hover {
+    background: #f0f3fb;
+  }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-zone:hover {
+    border-color: var(--accent);
+    background: #f9fafe;
+  }
+  .upload-zone.drag {
+    border-color: var(--accent);
+    background: #eff3ff;
+  }
+  .upload-zone p { margin: 4px 0; color: var(--muted); font-size: 14px; }
+  .upload-zone strong { color: var(--text); }
+  #fileInput { display: none; }
+  .preview {
+    margin-top: 12px;
+    display: none;
+  }
+  .preview img {
+    max-width: 100%;
+    max-height: 240px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .progress {
+    margin-top: 8px;
+    height: 6px;
+    background: #eef1f7;
+    border-radius: 3px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+  .recognized {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f5f7fb;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+  }
+  .recognized .nums {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .recognized .summary {
+    margin-top: 8px;
+    color: var(--muted);
+  }
+  .results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .result-card {
+    background: #f5f7fb;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .result-card.highlight {
+    background: linear-gradient(135deg, #4a6cf7 0%, #6b85ff 100%);
+    color: white;
+  }
+  .result-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+  }
+  .result-card.highlight .label { color: rgba(255,255,255,0.85); }
+  .result-card .value {
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .result-card .formula {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .result-card.highlight .formula { color: rgba(255,255,255,0.85); }
+  .error {
+    background: #fef0f1;
+    color: var(--danger);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 8px;
+    display: none;
+  }
+  .footer-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  @media (max-width: 600px) {
+    body { padding: 16px 12px; }
+    h1 { font-size: 22px; }
+    .card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Калькулятор ночных часов</h1>
+  <p class="subtitle">График 2/2 по 12 часов · ТК РК · зарплата в USD. Время в графике — UTC+3, ночные считаются по локальному часовому поясу сотрудника (22:00–06:00).</p>
+
+  <!-- IMPORT -->
+  <div class="card">
+    <h2>1. Источник графика <span class="badge">опционально</span></h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="manual">Вставить из Sheets</button>
+      <button class="tab" data-tab="sheets">Sheets по ссылке</button>
+      <button class="tab" data-tab="ocr">Скриншот (OCR)</button>
+    </div>
+
+    <div class="tab-panel active" data-panel="manual">
+      <div class="field">
+        <label>Скопируйте таблицу из Google Sheets и вставьте сюда</label>
+        <textarea id="manualText" rows="6" placeholder="В Sheets: выделите строки графика → Ctrl+A → Ctrl+C → сюда Ctrl+V"></textarea>
+        <span class="hint">Парсер найдёт имена сотрудников и коды R1–R5 в вашем тексте. Можно вставить как одну строку, так и весь лист с тремя месяцами — счётчики просуммируются.</span>
+      </div>
+      <button class="btn" id="parseManualBtn" style="margin-top:8px;">Разобрать</button>
+    </div>
+
+    <div class="tab-panel" data-panel="sheets">
+      <div class="field">
+        <label>Ссылка на публичную Google Sheets таблицу</label>
+        <input type="url" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+        <span class="hint">Таблица должна быть доступна по ссылке (Файл → Поделиться → Все, у кого есть ссылка)</span>
+      </div>
+      <div style="margin-top:10px;" class="row">
+        <button class="btn" id="loadSheetsBtn">Загрузить</button>
+        <button class="btn secondary" id="sheetsHelpBtn">Как открыть доступ?</button>
+      </div>
+      <div class="error" id="sheetsError"></div>
+      <div class="note-warning">
+        <strong>Если «failed to fetch»</strong> — это ограничение браузера (CORS) при открытии HTML как локального файла. Доступ к таблице тут ни при чём. Используйте вкладку «Вставить из Sheets» — это самый надёжный способ.
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="ocr">
+      <div class="note-warning">
+        <strong>OCR ненадёжен</strong> для плотных таблиц с мелкими ячейками R1–R5. Лучший результат даёт «Вставить из Sheets».
+      </div>
+      <label class="upload-zone" id="uploadZone" for="fileInput">
+        <p><strong>Перетащите скриншот сюда</strong> или нажмите, чтобы выбрать</p>
+        <p>JPG, PNG, WEBP</p>
+        <input type="file" id="fileInput" accept="image/*">
+      </label>
+      <div class="preview" id="preview"><img id="previewImg" alt=""></div>
+      <div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="error" id="ocrError"></div>
+    </div>
+
+    <div class="recognized" id="recognized">
+      <div><strong>Распознано в графике:</strong></div>
+      <div id="parsedEmployees"></div>
+      <div class="summary" id="recognizedSummary"></div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn secondary" id="applyHoursBtn">Применить к выбранному сотруднику</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="card">
+    <h2>2. Данные для расчёта</h2>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Сотрудник <span id="tzPill"></span></label>
+      <select id="employee">
+        <option value="">— выберите сотрудника —</option>
+        <optgroup label="Team A">
+          <option value="Ислам">Ислам · Казахстан</option>
+          <option value="Александра">Александра · Казахстан</option>
+          <option value="Полина">Полина · Россия</option>
+          <option value="Иван">Иван · Казахстан</option>
+          <option value="Марк">Марк · Казахстан</option>
+        </optgroup>
+        <optgroup label="Team B">
+          <option value="Никита">Никита · Казахстан</option>
+          <option value="Амаль">Амаль · Казахстан</option>
+          <option value="Зени">Зени · Россия</option>
+          <option value="Кирилл">Кирилл · Россия</option>
+          <option value="Бекзат">Бекзат · Казахстан</option>
+        </optgroup>
+      </select>
+      <span class="hint" id="tzHint">Часовой пояс определяет, как интерпретировать ночные часы и даты смен из графика (+3).</span>
+    </div>
+    <div class="grid">
+      <div class="field">
+        <label>Зарплата за месяц ($)</label>
+        <input type="number" id="salary" step="0.01" min="0" placeholder="1500">
+        <span class="hint">Стоимость часа = ЗП / 180 ч (среднее: 15 смен × 12 ч)</span>
+      </div>
+      <div class="field">
+        <label>Коэффициент ночных</label>
+        <input type="number" id="coefficient" step="0.1" min="1" value="1.5" placeholder="1.5">
+        <span class="hint">ТК РК ст. 108 — не ниже 1.5×</span>
+      </div>
+    </div>
+
+    <h3 class="subhead">Смены за период по ролям (МСК · UTC+3)</h3>
+    <div class="roles-grid" id="rolesGrid"></div>
+    <div id="scheduleInfo" class="schedule-info" style="display:none;"></div>
+
+    <div class="field" style="margin-top:14px;">
+      <label>Ночные часы вручную <span style="color:var(--muted);font-weight:normal;">(переопределяет расчёт по ролям)</span></label>
+      <input type="number" id="manualNight" step="0.5" min="0" placeholder="по умолчанию — из ролей">
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card">
+    <h2>3. Результат</h2>
+    <div class="results" id="results">
+      <div class="result-card">
+        <div class="label">Стоимость часа</div>
+        <div class="value" id="rHourly">—</div>
+        <div class="formula" id="fHourly">зарплата / норма</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Отработано часов</div>
+        <div class="value" id="rWorked">—</div>
+        <div class="formula" id="fWorked">смены × длительность</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Ночных часов (22–06)</div>
+        <div class="value" id="rNight">—</div>
+        <div class="formula" id="fNight">в локальном часовом поясе</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Доплата за ночные</div>
+        <div class="value" id="rPay">—</div>
+        <div class="formula" id="fPay">часы × ставка × (коэф − 1)</div>
+      </div>
+      <div class="result-card highlight">
+        <div class="label">Итого к выплате</div>
+        <div class="value" id="rTotal">—</div>
+        <div class="formula">зарплата + доплата</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer-note">Расчёт идёт в браузере. Данные никуда не отправляются.</p>
+</div>
+
+<script>
+// ---------- Tabs ----------
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === target);
+    });
+  });
+});
+
+// ---------- Constants ----------
+const ROLES = {
+  R1: { start: 7,  end: 19, label: '07–19' },
+  R2: { start: 7,  end: 19, label: '07–19' },
+  R3: { start: 9,  end: 21, label: '09–21' },
+  R4: { start: 12, end: 24, label: '12–00' },
+  R5: { start: 12, end: 24, label: '12–00' },
+};
+const ROLE_KEYS = ['R1','R2','R3','R4','R5'];
+const MONTHLY_NORM = 180; // 15 смен × 12 ч — фиксированная база для стоимости часа
+
+const EMPLOYEES = [
+  { name: 'Ислам',      tz: 'kz', team: 'A' },
+  { name: 'Александра', tz: 'kz', team: 'A' },
+  { name: 'Полина',     tz: 'ru', team: 'A' },
+  { name: 'Иван',       tz: 'kz', team: 'A' },
+  { name: 'Марк',       tz: 'kz', team: 'A' },
+  { name: 'Никита',     tz: 'kz', team: 'B' },
+  { name: 'Амаль',      tz: 'kz', team: 'B' },
+  { name: 'Зени',       tz: 'ru', team: 'B', aliases: ['Зеня'] },
+  { name: 'Кирилл',     tz: 'ru', team: 'B' },
+  { name: 'Бекзат',     tz: 'kz', team: 'B' },
+];
+const EMP_BY_NAME = Object.fromEntries(EMPLOYEES.map(e => [e.name, e]));
+
+let parsedSchedule = null;
+
+// ---------- Helpers ----------
+function num(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? null : v;
+}
+function formatNum(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  if (Math.abs(n - Math.round(n)) < 0.005) return Math.round(n).toString();
+  return n.toFixed(2);
+}
+function formatMoney(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+}
+function clearError(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'none';
+  el.textContent = '';
+}
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+// Night-window overlap (22:00–06:00 local) for a shift defined in UTC+3.
+function nightHoursForShift(startUtc3, endUtc3, tzOffset) {
+  if (startUtc3 == null || endUtc3 == null) return 0;
+  const endExt = endUtc3 + (endUtc3 <= startUtc3 ? 24 : 0);
+  const sLocal = startUtc3 + tzOffset;
+  const eLocal = endExt + tzOffset;
+  let total = 0;
+  for (let k = -1; k <= 1; k++) {
+    const ws = 22 + 24 * k;
+    const we = 30 + 24 * k;
+    total += Math.max(0, Math.min(eLocal, we) - Math.max(sLocal, ws));
+  }
+  return total;
+}
+
+const employeeSelect = document.getElementById('employee');
+const tzPill = document.getElementById('tzPill');
+const tzHint = document.getElementById('tzHint');
+
+function tzOffsetFromUtc3() {
+  const emp = EMP_BY_NAME[employeeSelect.value];
+  return emp && emp.tz === 'kz' ? 2 : 0;
+}
+
+// ---------- Schedule parsing ----------
+function emptyCounts() {
+  return { R1:0, R2:0, R3:0, R4:0, R5:0, OFF:0, OTPUSK:0 };
+}
+
+function countRoles(text) {
+  const counts = emptyCounts();
+  if (!text) return counts;
+  // R6 — это Team C, не учитываем. ОТПУСК — нерабочий период, считаем отдельно.
+  const matches = text.match(/R[1-5]|OFF|ОТПУСК/gi) || [];
+  matches.forEach(t => {
+    const u = t.toUpperCase();
+    if (counts[u] !== undefined) counts[u]++;
+    else if (/ОТПУСК/i.test(t)) counts.OTPUSK++;
+  });
+  return counts;
+}
+
+function lineMatchesEmployee(line, emp) {
+  const names = [emp.name, ...(emp.aliases || [])];
+  for (const n of names) {
+    const idx = line.toLowerCase().indexOf(n.toLowerCase());
+    if (idx === -1) continue;
+    const before = idx === 0 ? '' : line[idx - 1];
+    const after = idx + n.length >= line.length ? '' : line[idx + n.length];
+    const isLetter = c => c && /\p{L}/u.test(c);
+    if (!isLetter(before) && !isLetter(after)) return true;
+  }
+  return false;
+}
+
+function parseScheduleText(text) {
+  if (!text) return null;
+  const lines = text.split(/\r?\n/);
+  const byEmployee = {};
+  let anyMatch = false;
+  for (const line of lines) {
+    for (const emp of EMPLOYEES) {
+      if (lineMatchesEmployee(line, emp)) {
+        const c = countRoles(line);
+        const ts = ROLE_KEYS.reduce((s, r) => s + c[r], 0);
+        if (ts === 0 && c.OFF === 0 && c.OTPUSK === 0) break;
+        if (!byEmployee[emp.name]) byEmployee[emp.name] = emptyCounts();
+        Object.keys(c).forEach(k => byEmployee[emp.name][k] += c[k]);
+        anyMatch = true;
+        break;
+      }
+    }
+  }
+  if (anyMatch) return { mode: 'multi', byEmployee };
+  const single = countRoles(text);
+  const total = ROLE_KEYS.reduce((s, r) => s + single[r], 0);
+  if (total === 0 && single.OFF === 0 && single.OTPUSK === 0) return null;
+  return { mode: 'single', counts: single };
+}
+
+// ---------- Recognized panel ----------
+function renderChips(c) {
+  const parts = [];
+  ROLE_KEYS.forEach(r => {
+    if (c[r] > 0) parts.push(`<span class="r-chip"><strong>${r}</strong> ${ROLES[r].label}: ${c[r]}</span>`);
+  });
+  if (c.OFF > 0) parts.push(`<span class="r-chip muted"><strong>OFF</strong>: ${c.OFF}</span>`);
+  if (c.OTPUSK > 0) parts.push(`<span class="r-chip muted"><strong>ОТПУСК</strong>: ${c.OTPUSK}</span>`);
+  return parts.join('');
+}
+
+function showRecognized(parsed) {
+  const box = document.getElementById('recognized');
+  if (!parsed) { box.style.display = 'none'; parsedSchedule = null; return; }
+  parsedSchedule = parsed;
+  box.style.display = 'block';
+  const container = document.getElementById('parsedEmployees');
+  container.innerHTML = '';
+  if (parsed.mode === 'multi') {
+    const empNames = Object.keys(parsed.byEmployee);
+    let totalShiftsAll = 0, totalHoursAll = 0;
+    empNames.forEach(name => {
+      const c = parsed.byEmployee[name];
+      const emp = EMP_BY_NAME[name];
+      const totalShifts = ROLE_KEYS.reduce((s, r) => s + c[r], 0);
+      const totalHours = ROLE_KEYS.reduce((s, r) => s + c[r] * (ROLES[r].end - ROLES[r].start), 0);
+      totalShiftsAll += totalShifts;
+      totalHoursAll += totalHours;
+      const tzText = emp && emp.tz === 'kz' ? 'Казахстан' : emp && emp.tz === 'ru' ? 'Россия' : 'TZ?';
+      const card = document.createElement('div');
+      card.className = 'parsed-emp';
+      card.dataset.name = name;
+      card.innerHTML =
+        `<div class="parsed-emp-name">${name}<span class="parsed-emp-tz">${tzText}</span></div>` +
+        `<div class="role-counts">${renderChips(c)}</div>` +
+        `<div class="summary" style="margin-top:4px;">Смен: ${totalShifts} · Часов: ${formatNum(totalHours)}</div>`;
+      card.addEventListener('click', () => {
+        employeeSelect.value = name;
+        employeeSelect.dispatchEvent(new Event('change'));
+        container.querySelectorAll('.parsed-emp').forEach(el => el.classList.toggle('selected', el === card));
+      });
+      container.appendChild(card);
+    });
+    document.getElementById('recognizedSummary').textContent =
+      `Сотрудников: ${empNames.length} · Всего смен: ${totalShiftsAll} · Часов: ${formatNum(totalHoursAll)}. Кликните по карточке — данные перенесутся в расчёт.`;
+  } else {
+    const c = parsed.counts;
+    const totalShifts = ROLE_KEYS.reduce((s, r) => s + c[r], 0);
+    const totalHours = ROLE_KEYS.reduce((s, r) => s + c[r] * (ROLES[r].end - ROLES[r].start), 0);
+    const chips = document.createElement('div');
+    chips.className = 'role-counts';
+    chips.innerHTML = renderChips(c);
+    container.appendChild(chips);
+    document.getElementById('recognizedSummary').textContent =
+      `Смен: ${totalShifts} · Часов: ${formatNum(totalHours)}. Применится к выбранному сотруднику.`;
+  }
+}
+
+// ---------- Roles grid ----------
+function buildRolesGrid() {
+  const grid = document.getElementById('rolesGrid');
+  grid.innerHTML = '';
+  ROLE_KEYS.forEach(r => {
+    const role = ROLES[r];
+    const field = document.createElement('div');
+    field.className = 'role-field';
+    field.id = 'rf_' + r;
+    field.innerHTML =
+      `<div class="role-head"><span class="role-code">${r}</span><span class="role-time">${role.label}</span></div>` +
+      `<input type="number" id="c${r}" step="1" min="0" value="0" placeholder="0">` +
+      `<div class="role-foot"><span class="muted">ночных:</span> <span id="night${r}">0</span> ч/см</div>`;
+    grid.appendChild(field);
+  });
+  ROLE_KEYS.forEach(r => {
+    document.getElementById('c' + r).addEventListener('input', () => {
+      updateRoleFieldHighlight(r);
+      recalc();
+    });
+  });
+}
+
+function updateRoleFieldHighlight(r) {
+  const v = parseInt(document.getElementById('c' + r).value, 10) || 0;
+  document.getElementById('rf_' + r).classList.toggle('has-count', v > 0);
+}
+
+function applyCountsToCalculator(c) {
+  ROLE_KEYS.forEach(r => {
+    document.getElementById('c' + r).value = c[r] || 0;
+    updateRoleFieldHighlight(r);
+  });
+  document.getElementById('manualNight').value = '';
+  updateScheduleInfo(c);
+  recalc();
+}
+
+function updateScheduleInfo(c) {
+  const info = document.getElementById('scheduleInfo');
+  const vac = c && c.OTPUSK || 0;
+  if (vac > 0) {
+    info.innerHTML = `В период включено <strong>${vac}</strong> дней отпуска — ночные за них не считаются, но зарплата и стоимость часа не меняются.`;
+    info.style.display = 'block';
+  } else {
+    info.style.display = 'none';
+  }
+}
+
+function clearScheduleInfo() {
+  document.getElementById('scheduleInfo').style.display = 'none';
+}
+
+// ---------- OCR (Tesseract) ----------
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const progress = document.getElementById('progress');
+const progressBar = document.getElementById('progressBar');
+
+['dragenter', 'dragover'].forEach(ev => {
+  uploadZone.addEventListener(ev, e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+});
+['dragleave', 'drop'].forEach(ev => {
+  uploadZone.addEventListener(ev, e => { e.preventDefault(); uploadZone.classList.remove('drag'); });
+});
+uploadZone.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleImage(f);
+});
+fileInput.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) handleImage(f);
+});
+
+async function handleImage(file) {
+  clearError('ocrError');
+  if (!file.type.startsWith('image/')) {
+    showError('ocrError', 'Файл должен быть изображением.');
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  preview.style.display = 'block';
+  progress.style.display = 'block';
+  progressBar.style.width = '0%';
+  try {
+    const result = await Tesseract.recognize(file, 'eng+rus', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          progressBar.style.width = `${Math.round(m.progress * 100)}%`;
+        }
+      }
+    });
+    const text = result.data.text || '';
+    const parsed = parseScheduleText(text);
+    showRecognized(parsed);
+    if (!parsed) {
+      showError('ocrError', 'Не удалось распознать роли R1–R6. На плотных таблицах OCR часто ошибается — лучше использовать «Google Sheets» или «Текст / CSV».');
+    }
+  } catch (err) {
+    showError('ocrError', 'Ошибка OCR: ' + err.message);
+  } finally {
+    setTimeout(() => { progress.style.display = 'none'; }, 500);
+  }
+}
+
+// ---------- Google Sheets ----------
+async function fetchSheetCsv(url) {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!m) throw new Error('Не похоже на ссылку Google Sheets.');
+  const id = m[1];
+  const gidMatch = url.match(/[#&?]gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+  const candidates = [
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`,
+    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`,
+  ];
+  let lastErr = null;
+  for (const u of candidates) {
+    try {
+      const res = await fetch(u);
+      if (res.ok) return await res.text();
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('unknown');
+}
+
+document.getElementById('loadSheetsBtn').addEventListener('click', async () => {
+  clearError('sheetsError');
+  const url = document.getElementById('sheetsUrl').value.trim();
+  if (!url) {
+    showError('sheetsError', 'Вставьте ссылку.');
+    return;
+  }
+  try {
+    const csv = await fetchSheetCsv(url);
+    const parsed = parseScheduleText(csv);
+    showRecognized(parsed);
+    if (!parsed) {
+      showError('sheetsError', 'В таблице не найдено ролей R1–R5.');
+    }
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    showError('sheetsError',
+      `Не удалось загрузить (${msg}). Скорее всего CORS-ограничение при открытии HTML локально. ` +
+      `Решения: 1) использовать «Вставить из Sheets» (самый надёжный путь); ` +
+      `2) запустить локальный сервер: в терминале в папке с файлом — python3 -m http.server, ` +
+      `затем открыть http://localhost:8000/index.html`
+    );
+  }
+});
+
+document.getElementById('sheetsHelpBtn').addEventListener('click', () => {
+  alert(
+    'Откройте таблицу в Google Sheets → Файл → Поделиться → Открыть доступ.\n\n' +
+    'Выберите «Все, у кого есть ссылка», роль «Читатель». Скопируйте ссылку и вставьте сюда.'
+  );
+});
+
+// ---------- Manual / CSV ----------
+document.getElementById('parseManualBtn').addEventListener('click', () => {
+  const text = document.getElementById('manualText').value;
+  const parsed = parseScheduleText(text);
+  showRecognized(parsed);
+});
+
+// ---------- Apply button ----------
+document.getElementById('applyHoursBtn').addEventListener('click', () => {
+  if (!parsedSchedule) return;
+  if (parsedSchedule.mode === 'single') {
+    applyCountsToCalculator(parsedSchedule.counts);
+    document.getElementById('rolesGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  const name = employeeSelect.value;
+  if (name && parsedSchedule.byEmployee[name]) {
+    applyCountsToCalculator(parsedSchedule.byEmployee[name]);
+    document.getElementById('rolesGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    alert('Выберите сотрудника — кликом по карточке выше или в выпадающем списке.');
+  }
+});
+
+// ---------- Calculation ----------
+function recalc() {
+  const salary = num('salary');
+  const norm = MONTHLY_NORM;
+  const coef = num('coefficient') ?? 1.5;
+  const tz = tzOffsetFromUtc3();
+
+  // night-per-shift labels per role
+  ROLE_KEYS.forEach(r => {
+    const role = ROLES[r];
+    const night = nightHoursForShift(role.start, role.end, tz);
+    const el = document.getElementById('night' + r);
+    if (el) el.textContent = formatNum(night);
+  });
+
+  let totalHours = 0;
+  let autoNight = 0;
+  const used = [];
+  ROLE_KEYS.forEach(r => {
+    const c = num('c' + r) ?? 0;
+    if (c > 0) used.push(`${c}×${r}`);
+    const role = ROLES[r];
+    totalHours += c * (role.end - role.start);
+    autoNight += c * nightHoursForShift(role.start, role.end, tz);
+  });
+
+  const manualNight = num('manualNight');
+  const totalNight = manualNight != null ? manualNight : autoNight;
+
+  let hourly = null, hourlyFormula = 'зарплата / норма';
+  if (salary !== null && norm && norm > 0) {
+    hourly = salary / norm;
+    hourlyFormula = `${formatMoney(salary)} / ${formatNum(norm)} ч`;
+  }
+
+  let premium = null;
+  if (hourly !== null && totalNight > 0) {
+    premium = totalNight * hourly * (coef - 1);
+  }
+
+  const total = (salary ?? 0) + (premium ?? 0);
+
+  document.getElementById('rHourly').textContent = formatMoney(hourly);
+  document.getElementById('fHourly').textContent = hourlyFormula;
+
+  document.getElementById('rWorked').textContent = totalHours > 0 ? formatNum(totalHours) + ' ч' : '—';
+  document.getElementById('fWorked').textContent = used.length ? used.join(' + ') : 'роли × длительность';
+
+  document.getElementById('rNight').textContent = formatNum(totalNight) + ' ч';
+  document.getElementById('fNight').textContent =
+    manualNight != null ? 'указано вручную' :
+    (totalHours > 0 ? 'по ролям с учётом TZ' : 'в локальном часовом поясе');
+
+  document.getElementById('rPay').textContent = formatMoney(premium);
+  document.getElementById('fPay').textContent =
+    (hourly !== null && totalNight > 0)
+      ? `${formatNum(totalNight)} × ${formatMoney(hourly)} × ${(coef - 1).toFixed(2).replace(/\.?0+$/, '')}`
+      : 'часы × ставка × (коэф − 1)';
+
+  document.getElementById('rTotal').textContent =
+    (salary !== null || premium !== null) ? formatMoney(total) : '—';
+}
+
+// ---------- Live listeners ----------
+['salary','coefficient','manualNight']
+  .forEach(id => document.getElementById(id).addEventListener('input', recalc));
+
+// ---------- Employee handler ----------
+employeeSelect.addEventListener('change', () => {
+  const name = employeeSelect.value;
+  const emp = EMP_BY_NAME[name];
+  tzPill.removeAttribute('style');
+  if (emp && emp.tz === 'kz') {
+    tzPill.className = 'tz-pill kz';
+    tzPill.textContent = 'UTC+5 · Казахстан';
+    tzHint.textContent = `${name}: работает в UTC+5. Время из графика (UTC+3) сдвигается на +2 ч.`;
+  } else if (emp && emp.tz === 'ru') {
+    tzPill.className = 'tz-pill ru';
+    tzPill.textContent = 'UTC+3 · Россия';
+    tzHint.textContent = `${name}: работает в UTC+3, как в графике.`;
+  } else {
+    tzPill.className = '';
+    tzPill.textContent = '';
+    tzHint.textContent = 'Часовой пояс влияет на расчёт ночных часов (22:00–06:00 локально).';
+  }
+
+  if (parsedSchedule && parsedSchedule.mode === 'multi' && parsedSchedule.byEmployee[name]) {
+    applyCountsToCalculator(parsedSchedule.byEmployee[name]);
+    document.querySelectorAll('.parsed-emp').forEach(el => {
+      el.classList.toggle('selected', el.dataset.name === name);
+    });
+  } else {
+    clearScheduleInfo();
+    recalc();
+  }
+});
+
+// ---------- Init ----------
+buildRolesGrid();
+recalc();
+</script>
+</body>
+</html>
