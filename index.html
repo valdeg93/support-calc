@@ -525,9 +525,9 @@
         <div class="formula" id="fPay">часы × ставка × (коэф − 1)</div>
       </div>
       <div class="result-card">
-        <div class="label">Оплата резерва (RH/RF)</div>
+        <div class="label">Доплата за резерв (RH/RF)</div>
         <div class="value" id="rReserve">—</div>
-        <div class="formula" id="fReserve">часы сверх нормы × ставка × коэф</div>
+        <div class="formula" id="fReserve">часы × ставка × (коэф − 1)</div>
       </div>
       <div class="result-card highlight">
         <div class="label">Итого к выплате</div>
@@ -776,7 +776,7 @@ function buildRolesGrid() {
     field.innerHTML =
       `<div class="role-head"><span class="role-code reserve-code">${r}</span><span class="role-time">${res.hours}ч</span></div>` +
       `<input type="number" id="c${r}" step="1" min="0" value="0" placeholder="0">` +
-      `<div class="role-foot reserve-foot">${res.label} · ×1.5</div>`;
+      `<div class="role-foot reserve-foot">${res.label} · доплата ×0.5</div>`;
     grid.appendChild(field);
   });
   [...ROLE_KEYS, ...RESERVE_KEYS].forEach(r => {
@@ -1004,7 +1004,7 @@ function recalc() {
   }
   let reservePay = null;
   if (hourly !== null && reserveHours > 0) {
-    reservePay = reserveHours * hourly * coef;
+    reservePay = reserveHours * hourly * (coef - 1);
   }
 
   const total = (salary ?? 0) + (nightPremium ?? 0) + (reservePay ?? 0);
@@ -1030,8 +1030,8 @@ function recalc() {
   document.getElementById('rReserve').textContent = formatMoney(reservePay);
   document.getElementById('fReserve').textContent =
     reserveHours > 0
-      ? `${usedReserves.join(' + ')} = ${formatNum(reserveHours)} ч × ${formatMoney(hourly)} × ${coef}`
-      : 'часы сверх нормы × ставка × коэф';
+      ? `${usedReserves.join(' + ')} = ${formatNum(reserveHours)} ч × ${formatMoney(hourly)} × ${(coef - 1).toFixed(2).replace(/\.?0+$/, '')}`
+      : 'часы × ставка × (коэф − 1)';
 
   document.getElementById('rTotal').textContent =
     (salary !== null || nightPremium !== null || reservePay !== null) ? formatMoney(total) : '—';
