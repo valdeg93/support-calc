@@ -476,6 +476,12 @@
         </optgroup>
       </select>
       <span class="hint" id="tzHint">Часовой пояс определяет, как интерпретировать ночные часы и даты смен из графика (+3).</span>
+      <div id="legacyTzToggle" style="display:none; margin-top:8px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--text);">
+          <input type="checkbox" id="useLegacyTz">
+          <span id="legacyTzLabel"></span>
+        </label>
+      </div>
     </div>
     <div class="grid">
       <div class="field">
@@ -578,12 +584,13 @@ const EMPLOYEES = [
   { name: 'Никита',     tz: 'kz', team: 'B' },
   { name: 'Амаль',      tz: 'kz', team: 'B' },
   { name: 'Зени',       tz: 'ru', team: 'B', aliases: ['Зеня'] },
-  { name: 'Кирилл',     tz: 'kz', team: 'B' },
+  { name: 'Кирилл',     tz: 'kz', team: 'B', legacyTz: 'ru', legacyUntil: '01.07.2026' },
   { name: 'Бекзат',     tz: 'kz', team: 'B' },
 ];
 const EMP_BY_NAME = Object.fromEntries(EMPLOYEES.map(e => [e.name, e]));
 
 let parsedSchedule = null;
+let useLegacyTz = false;
 
 // ---------- Helpers ----------
 function num(id) {
@@ -631,9 +638,14 @@ const employeeSelect = document.getElementById('employee');
 const tzPill = document.getElementById('tzPill');
 const tzHint = document.getElementById('tzHint');
 
+function effectiveTz(emp) {
+  if (!emp) return null;
+  return (useLegacyTz && emp.legacyTz) ? emp.legacyTz : emp.tz;
+}
+
 function tzOffsetFromUtc3() {
-  const emp = EMP_BY_NAME[employeeSelect.value];
-  return emp && emp.tz === 'kz' ? 2 : 0;
+  const tz = effectiveTz(EMP_BY_NAME[employeeSelect.value]);
+  return tz === 'kz' ? 2 : 0;
 }
 
 // ---------- Schedule parsing ----------
@@ -1042,24 +1054,57 @@ function recalc() {
   .forEach(id => document.getElementById(id).addEventListener('input', recalc));
 
 // ---------- Employee handler ----------
-employeeSelect.addEventListener('change', () => {
+const legacyTzToggle = document.getElementById('legacyTzToggle');
+const useLegacyTzCb = document.getElementById('useLegacyTz');
+const legacyTzLabel = document.getElementById('legacyTzLabel');
+
+function updateTzDisplay() {
   const name = employeeSelect.value;
   const emp = EMP_BY_NAME[name];
   tzPill.removeAttribute('style');
-  if (emp && emp.tz === 'kz') {
-    tzPill.className = 'tz-pill kz';
-    tzPill.textContent = 'UTC+5 · Казахстан';
-    tzHint.textContent = `${name}: работает в UTC+5. Время из графика (UTC+3) сдвигается на +2 ч.`;
-  } else if (emp && emp.tz === 'ru') {
-    tzPill.className = 'tz-pill ru';
-    tzPill.textContent = 'UTC+3 · Россия';
-    tzHint.textContent = `${name}: работает в UTC+3, как в графике.`;
-  } else {
+
+  if (!emp) {
     tzPill.className = '';
     tzPill.textContent = '';
     tzHint.textContent = 'Часовой пояс влияет на расчёт ночных часов (22:00–06:00 локально).';
+    legacyTzToggle.style.display = 'none';
+    return;
   }
 
+  if (emp.legacyTz) {
+    const legacyName = emp.legacyTz === 'kz' ? 'UTC+5 (Казахстан)' : 'UTC+3 (Россия)';
+    legacyTzLabel.textContent = `Использовать ${legacyName} — для расчётов до ${emp.legacyUntil}`;
+    legacyTzToggle.style.display = 'block';
+  } else {
+    legacyTzToggle.style.display = 'none';
+  }
+
+  const tz = effectiveTz(emp);
+  const isLegacy = useLegacyTz && emp.legacyTz;
+  const periodSuffix = isLegacy ? ` · до ${emp.legacyUntil}` : '';
+  if (tz === 'kz') {
+    tzPill.className = 'tz-pill kz';
+    tzPill.textContent = 'UTC+5 · Казахстан' + periodSuffix;
+    tzHint.textContent = `${name}: работает в UTC+5${periodSuffix}. Время из графика (UTC+3) сдвигается на +2 ч.`;
+  } else {
+    tzPill.className = 'tz-pill ru';
+    tzPill.textContent = 'UTC+3 · Россия' + periodSuffix;
+    tzHint.textContent = `${name}: работает в UTC+3${periodSuffix}, как в графике.`;
+  }
+}
+
+useLegacyTzCb.addEventListener('change', () => {
+  useLegacyTz = useLegacyTzCb.checked;
+  updateTzDisplay();
+  recalc();
+});
+
+employeeSelect.addEventListener('change', () => {
+  useLegacyTz = false;
+  useLegacyTzCb.checked = false;
+  updateTzDisplay();
+
+  const name = employeeSelect.value;
   if (parsedSchedule && parsedSchedule.mode === 'multi' && parsedSchedule.byEmployee[name]) {
     applyCountsToCalculator(parsedSchedule.byEmployee[name]);
     document.querySelectorAll('.parsed-emp').forEach(el => {
