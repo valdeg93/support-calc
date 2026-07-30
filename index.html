@@ -531,14 +531,14 @@
         <div class="formula" id="fPay">часы × ставка × (коэф − 1)</div>
       </div>
       <div class="result-card">
-        <div class="label">Оплата резерва (RH/RF)</div>
+        <div class="label">Оплата переработки (RH/RF)</div>
         <div class="value" id="rReserve">—</div>
         <div class="formula" id="fReserve">часы × ставка × коэф</div>
       </div>
       <div class="result-card highlight">
         <div class="label">Итого к выплате</div>
         <div class="value" id="rTotal">—</div>
-        <div class="formula">зарплата + ночные + резерв</div>
+        <div class="formula">зарплата + ночные + переработка</div>
       </div>
     </div>
   </div>
@@ -567,7 +567,7 @@ const ROLES = {
   R5: { start: 12, end: 24, label: '12–00' },
 };
 const ROLE_KEYS = ['R1','R2','R3','R4','R5'];
-// Резервные смены — берутся сверх 15-сменной нормы, оплачиваются по 1.5× ставки полностью.
+// Переработка — смены сверх 15-сменной нормы, оплачиваются по 1.5× ставки полностью.
 const RESERVES = {
   RH: { hours: 6,  label: '½ смены · выходной' },
   RF: { hours: 12, label: 'полная смена · выходной' },
@@ -656,7 +656,7 @@ function emptyCounts() {
 function countRoles(text) {
   const counts = emptyCounts();
   if (!text) return counts;
-  // R1-R5 — обычные смены; RH/RF — резервные сверх нормы; R6 пропускаем (Team C); ОТПУСК — отдельно.
+  // R1-R5 — обычные смены; RH/RF — переработка сверх нормы; R6/R7/UB пропускаем; ОТПУСК — отдельно.
   const matches = text.match(/R[1-5]|RF|RH|OFF|ОТПУСК/gi) || [];
   matches.forEach(t => {
     const u = t.toUpperCase();
