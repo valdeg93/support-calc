@@ -151,6 +151,27 @@
   .reserve-code { color: #6a3aa6; }
   .reserve-foot { color: #6a3aa6 !important; }
   .r-chip.reserve { background: #f3eafa; border-color: #d4b8ee; color: #6a3aa6; }
+  .result-card.breakdown {
+    grid-column: 1 / -1;
+    padding: 14px 18px;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .breakdown-row + .breakdown-row { border-top: 1px dashed var(--border); }
+  .breakdown-row.total {
+    border-top: 2px solid var(--accent);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  .breakdown-label { color: var(--muted); }
+  .breakdown-value { font-weight: 500; font-size: 15px; }
+  .breakdown-row.total .breakdown-label { color: var(--text); font-weight: 600; font-size: 15px; }
+  .breakdown-row.total .breakdown-value { font-size: 20px; font-weight: 700; color: var(--accent); }
   .role-head {
     display: flex;
     justify-content: space-between;
@@ -534,6 +555,21 @@
         <div class="label">Оплата переработки (RH/RF)</div>
         <div class="value" id="rReserve">—</div>
         <div class="formula" id="fReserve">часы × ставка × коэф</div>
+      </div>
+      <div class="result-card breakdown">
+        <div class="label">Разбивка</div>
+        <div class="breakdown-row">
+          <span class="breakdown-label">Базовая зарплата</span>
+          <span class="breakdown-value" id="rBase">—</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="breakdown-label">Ночные + переработка</span>
+          <span class="breakdown-value" id="rExtra">—</span>
+        </div>
+        <div class="breakdown-row total">
+          <span class="breakdown-label">Общая сумма</span>
+          <span class="breakdown-value" id="rTotalBd">—</span>
+        </div>
       </div>
       <div class="result-card highlight">
         <div class="label">Итого к выплате</div>
@@ -1046,6 +1082,14 @@ function recalc() {
       : 'часы × ставка × коэф';
 
   document.getElementById('rTotal').textContent =
+    (salary !== null || nightPremium !== null || reservePay !== null) ? formatMoney(total) : '—';
+
+  // Breakdown card
+  const extras = (nightPremium ?? 0) + (reservePay ?? 0);
+  document.getElementById('rBase').textContent = salary !== null ? formatMoney(salary) : '—';
+  document.getElementById('rExtra').textContent =
+    (nightPremium !== null || reservePay !== null) ? formatMoney(extras) : (salary !== null ? formatMoney(0) : '—');
+  document.getElementById('rTotalBd').textContent =
     (salary !== null || nightPremium !== null || reservePay !== null) ? formatMoney(total) : '—';
 }
 
